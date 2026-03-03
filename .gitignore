@@ -1,0 +1,16 @@
+# Ignore Python cache (prevents 'already compiled' errors)
+_pycache_/
+*.py[cod]
+
+# Ignore Jupyter Notebook temporary checkpoints
+.ipynb_checkpoints/
+
+# Ignore Virtual Environments (they are too large to upload)
+venv/
+env/
+
+# Ignore macOS system files (if you or a friend use Mac)
+.DS_Store
+
+# Ignore your model if it's over 100MB (GitHub's limit)
+# model.pkl
