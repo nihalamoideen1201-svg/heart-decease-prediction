@@ -3,10 +3,10 @@
 # from pydantic import BaseModel
 
 
-
+import os
 import streamlit as st
 import requests
-
+BACKEND_URL = "http://54.252.223.57:8000"
 st.title("❤️ Heart Disease Prediction System")
 
 # Create two columns for a cleaner layout
@@ -81,3 +81,4 @@ if st.button("Predict Heart Disease Status"):
             
     except Exception as e:
         st.error(f"Backend connection failed. Is your FastAPI server running? Error: {e}")
+
