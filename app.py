@@ -1,13 +1,12 @@
-# from fastapi import FastAPI
-# import joblib
-# from pydantic import BaseModel
-
-
 import os
-import streamlit as st
+
 import requests
-BACKEND_URL = "http://54.252.223.57:8000"
-st.title("❤️ Heart Disease Prediction System")
+import streamlit as st
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+
+st.title("Heart Disease Prediction System")
+st.caption(f"Backend URL: {BACKEND_URL}")
 
 # Create two columns for a cleaner layout
 col1, col2 = st.columns(2)
@@ -29,56 +28,37 @@ with col2:
     ca = st.number_input("Major Vessels", value=0)
     thal = st.number_input("Thal", value=0)
 
-if st.button("Predict"):
-    input_data = {
-        "age": age, "sex": sex, "cp": cp, "trestbps": trestbps, "chol": chol,
-        "fbs": fbs, "restecg": restecg, "thalach": thalach, "exang": exang,
-        "oldpeak": oldpeak, "slope": slope, "ca": ca, "thal": thal
-    }
-    
-    # This sends the data to your FastAPI running in the other terminal
-    try:
-        response = requests.post("http://127.0.0.1:8000/predict", json=input_data)
-        if response.status_code == 200:
-            result = response.json()
-            st.success(f"The Prediction is: {result}")
-        else:
-            st.error(f"API Error: {response.status_code}")
-    except Exception as e:
-        st.error(f"Connection failed: Ensure FastAPI is running on port 8000")
-
-         
-
 if st.button("Predict Heart Disease Status"):
-    
-    # 2. Gather all the input variables into a dictionary
     user_data = {
-    "age": age,
-    "sex": sex,
-    "cp": cp,
-    "trestbps": trestbps,
-    "chol": chol,
-    "fbs": fbs,
-    "restecg": restecg,
-    "thalach": thalach,  # Add these based on your col2 variable names
-    "exang": exang,
-    "oldpeak": oldpeak,
-    "slope": slope,
-    "ca": ca,
-    "thal": thal
-}
+        "age": age,
+        "sex": sex,
+        "cp": cp,
+        "trestbps": trestbps,
+        "chol": chol,
+        "fbs": fbs,
+        "restecg": restecg,
+        "thalach": thalach,
+        "exang": exang,
+        "oldpeak": oldpeak,
+        "slope": slope,
+        "ca": ca,
+        "thal": thal,
+    }
 
-    # 3. Send data to FastAPI (Make sure main.py is running on port 8000)
     try:
-        response = requests.post("http://127.0.0.1:8000/predict", json=user_data)
-        prediction = response.json()
-        
-        # 4. Display the result
-        if prediction['prediction'] == 1:
-            st.error("The model predicts a high risk of heart disease.")
-        else:
-            st.success("The model predicts a low risk of heart disease.")
-            
-    except Exception as e:
-        st.error(f"Backend connection failed. Is your FastAPI server running? Error: {e}")
+        response = requests.post(f"{BACKEND_URL}/predict", json=user_data, timeout=10)
 
+        if response.status_code == 200:
+            prediction = response.json()
+            st.subheader("Results:")
+            if prediction["prediction"] == 1:
+                st.error("The model predicts a high risk of heart disease.")
+            else:
+                st.success("The model predicts a low risk of heart disease.")
+        else:
+            st.error(f"Backend error: {response.status_code}")
+            st.write(response.text)
+
+    except Exception as e:
+        st.error(f"Could not connect to the backend. Error: {e}")
+        st.info("Start the API first with: python main.py")
