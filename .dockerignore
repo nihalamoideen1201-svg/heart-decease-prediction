@@ -1,0 +1,9 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+evaluation_report.json
+mini_task (1).ipynb

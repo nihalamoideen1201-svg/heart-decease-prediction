@@ -1,15 +1,14 @@
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
-from fastapi import FastAPI
 import joblib
 import pandas as pd
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
 
-# 1. Initialize the app
-app = FastAPI()
-
-# 2. Load your pickled model 
-# IMPORTANT: Ensure your model file is named 'model.pkl' and is in C:\Users\DELL\
-model = joblib.load("model.pkl")
+APP_DIR = Path(__file__).resolve().parent
+MODEL_PATH = APP_DIR / "model.pkl"
 
 FEATURE_COLUMNS = [
     "age",
@@ -27,55 +26,80 @@ FEATURE_COLUMNS = [
     "thal",
 ]
 
-# 3. Define the structure for your model inputs
+app = FastAPI(
+    title="Heart Disease Prediction API",
+    version="1.0.0",
+    description="Predicts heart disease risk from structured clinical features.",
+)
+
+
 class ModelInput(BaseModel):
-    age: int
-    sex: int
-    cp: int
-    trestbps: int
-    chol: int
-    fbs: int
-    restecg: int
-    thalach: int
-    exang: int
-    oldpeak: float
-    slope: int
-    ca: int
-    thal: int
+    model_config = ConfigDict(extra="forbid")
+
+    age: int = Field(..., ge=1, le=120)
+    sex: int = Field(..., ge=0, le=1)
+    cp: int = Field(..., ge=0, le=3)
+    trestbps: int = Field(..., ge=50, le=300)
+    chol: int = Field(..., ge=50, le=700)
+    fbs: int = Field(..., ge=0, le=1)
+    restecg: int = Field(..., ge=0, le=2)
+    thalach: int = Field(..., ge=50, le=250)
+    exang: int = Field(..., ge=0, le=1)
+    oldpeak: float = Field(..., ge=0, le=10)
+    slope: int = Field(..., ge=0, le=2)
+    ca: int = Field(..., ge=0, le=4)
+    thal: int = Field(..., ge=0, le=3)
+
+
+@lru_cache(maxsize=1)
+def load_model() -> Any:
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+    return joblib.load(MODEL_PATH)
+
+
+def build_features(data: ModelInput) -> pd.DataFrame:
+    return pd.DataFrame([[getattr(data, column) for column in FEATURE_COLUMNS]], columns=FEATURE_COLUMNS)
+
 
 @app.get("/")
-def read_root():
-    return {"message": "Hello Nihala, the model is ready!"}
+def read_root() -> dict[str, str]:
+    return {"message": "Heart Disease Prediction API is running."}
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    try:
+        load_model()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Model unavailable: {exc}") from exc
+
+    return {"status": "ok", "model_path": str(MODEL_PATH.name)}
+
 
 @app.post("/predict")
-def predict(data: ModelInput):
-    # Preserve feature names expected by the trained sklearn pipeline.
-    input_features = pd.DataFrame(
-        [[
-            data.age,
-            data.sex,
-            data.cp,
-            data.trestbps,
-            data.chol,
-            data.fbs,
-            data.restecg,
-            data.thalach,
-            data.exang,
-            data.oldpeak,
-            data.slope,
-            data.ca,
-            data.thal,
-        ]],
-        columns=FEATURE_COLUMNS,
-    )
-    
-    # Run prediction using the loaded joblib model
-    prediction = model.predict(input_features)
-    
-    return {"prediction": int(prediction[0])}
+def predict(data: ModelInput) -> dict[str, Any]:
+    try:
+        model = load_model()
+        input_features = build_features(data)
+        prediction = int(model.predict(input_features)[0])
+        result: dict[str, Any] = {
+            "prediction": prediction,
+            "risk_label": "high_risk" if prediction == 1 else "low_risk",
+        }
+
+        if hasattr(model, "predict_proba"):
+            probability = float(model.predict_proba(input_features)[0][1])
+            result["probability"] = round(probability, 4)
+
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
