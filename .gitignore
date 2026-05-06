@@ -15,3 +15,10 @@ env/
 
 # Ignore your model if it's over 100MB (GitHub's limit)
 # model.pkl
+
+# Ignore local MLflow tracking data
+mlruns/
+
+# Ignore local datasets while keeping documented samples
+data/*.csv
+!data/*.sample.csv

@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -8,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 APP_DIR = Path(__file__).resolve().parent
-MODEL_PATH = APP_DIR / "model.pkl"
+MODEL_PATH = Path(os.getenv("MODEL_PATH", str(APP_DIR / "model.pkl"))).resolve()
 
 FEATURE_COLUMNS = [
     "age",
@@ -102,4 +103,6 @@ def predict(data: ModelInput) -> dict[str, Any]:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host=host, port=port, reload=False)

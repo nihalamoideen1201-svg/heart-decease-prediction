@@ -1,9 +1,25 @@
 import os
+from urllib.parse import urlparse
 
 import requests
 import streamlit as st
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+
+def normalize_backend_url(raw_url: str) -> str:
+    value = raw_url.strip().rstrip("/")
+    if not value:
+        return "http://127.0.0.1:8000"
+
+    parsed = urlparse(value)
+    if not parsed.scheme:
+        return f"http://{value}"
+
+    return value
+
+
+default_backend_url = normalize_backend_url(os.getenv("BACKEND_URL", "http://127.0.0.1:8000"))
+backend_url_input = st.sidebar.text_input("Backend URL", value=default_backend_url)
+BACKEND_URL = normalize_backend_url(backend_url_input)
 
 st.title("Heart Disease Prediction System")
 st.caption(f"Backend URL: {BACKEND_URL}")
