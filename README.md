@@ -2,6 +2,31 @@
 
 Heart disease risk prediction demo built with FastAPI, Streamlit, and a saved scikit-learn pipeline.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Dataset CSV] --> B[check_dataset.py]
+    A --> C[train_model.py]
+    C --> D[scikit-learn Pipeline<br/>StandardScaler + LogisticRegression]
+    D --> E[model.pkl]
+    D --> F[training_report.json]
+    D --> G[MLflow mlruns/]
+    A --> H[retrain_if_needed.py]
+    H --> I[Schema and metric checks]
+    I --> J[model_metadata.json]
+    E --> K[FastAPI backend<br/>main.py]
+    J --> K
+    L[User inputs] --> M[Streamlit frontend<br/>app.py]
+    M -->|POST /predict| K
+    K --> N[Risk prediction + probability]
+    A --> O[evaluate_model.py]
+    E --> O
+    O --> P[evaluation_report.json]
+    Q[tests/] --> K
+    K --> R[Docker deployment]
+```
+
 ## Project layout
 
 - `main.py`: FastAPI backend with `/health` and `/predict`
